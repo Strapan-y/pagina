@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8" />
+
+<head>
+    <script type="text/javascript" src="C:\Datos\Capas\paisesmundo.js"></script>
+    <script type="text/javascript" src="C:\Datos\Capas\ciudadesmundo.js"></script>
+    <script type="text/javascript" src="C:\Datos\Capas\Departamentos_Colombia.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.3.0/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.3.0/dist/leaflet.markercluster.js"></script>
+
+    <!----Plugin Cluster--->
+    <link rel="stylesheet" href="../css/styledLayerControl.css" />
+    <script src="../src/styledLayerControl.js"></script>
+
+    <!-- Plugin Mini Map -->
+    <link rel="stylesheet" type="text/css"
+        href="C:\Users\andre\Desktop\Visor web\Leaflet-MiniMap-master\Leaflet-MiniMap-master\dist\Control.MiniMap.min.css" />
+    <script
+        src="C:\Users\andre\Desktop\Visor web\Leaflet-MiniMap-master\Leaflet-MiniMap-master\dist\Control.MiniMap.min.js"></script>
+
+    <style>
+        #map {
+            width: 100%;
+            height: 600px;
+            box-shadow: 5px 5px 5px #888;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+        var markers = L.markerClusterGroup();
+
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
+                + 'contributors', maxZoom: 18
+        });
+
+        //Estilo paises mundo
+        function getColor(d) {
+            return d > 100000000 ? '#800026' :
+                d > 50000000 ? '#BD0026' :
+                    d > 20000000 ? '#E31A1C' :
+                        d > 10000000 ? '#FC4E2A' :
+                            d > 5000000 ? '#FD8D3C' :
+                                d > 2000000 ? '#FEB24C' :
+                                    d > 1000000 ? '#FED976' :
+                                        '#FFEDA0';
+        };
+
+        function style(feature) {
+            return {
+                fillColor: getColor(feature.properties.pop_est),
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.7
+            };
+        }
+
+        //Estilo ciudades mundo
+
+        function getColorCiudades(ciud) {
+            return ciud == "S" ? "#000FFF" : ciud == "N" ? "#FF0000" : "#FFFFFF";
+        }
+
+        function getColor_depar(d) {
+            return d > 100000000000 ? 'red' :
+                d > 50000000000 ? 'lime' :
+                    d > 20000000000 ? 'yellow' :
+                        'fuchsia';
+        };
+
+        //Estilo departamento
+
+        function estilodepar(feature) {
+            return {
+                fillColor: getColor_depar(feature.properties.SHAPE_AREA),
+                weight: 2,
+                opacity: 1,
+                color: 'black',
+                dashArray: '0',
+                fillOpacity: 0.9
+            };
+        }
+
+        //Funciones
+
+        function popup(feature, layer) {
+            if (feature.properties && feature.properties.name) {
+                layer.bindPopup(feature.properties.name);
+            }
+        }
+
+        //agregar mi mapa
+        var map = L.map('map', {
+            center: [41.66, -4.72],
+            zoom: 4,
+            layers: [osm],
+            scrollWheelZoom: false,
+        });
+
+        // Agregar capas GeoJson
+        pais = L.geoJson(paisesmundo, {
+            style: style,
+            onEachFeature: popup
+        });
+
+        var Ciudades = L.geoJSON(ciudadesmundo, {
+            pointToLayer: function (feature, latlng) {
+                return markers.addLayer(
+                    L.circleMarker(latlng, {
+                        radius: 8,
+                        fillColor: getColorCiudades(feature.properties.capital),
+                        weight: 1,
+                        opacity: 0,
+                        color: "black",
+                        fillOpacity: 1,
+                    }).bindPopup(
+                        "Pais: " +
+                        feature.properties.pais +
+                        "<br>" +
+                        "Nombre: " +
+                        feature.properties.ciudad +
+                        "<br>" +
+                        "Es capital: " +
+                        feature.properties.capital
+                    )
+                );
+            },
+        });
+
+        
+
+        depart = L.tileLayer.wms('http://localhost:8080/geoserver/visorweb/wms?', {
+            layers: "visorweb:departamentos",
+            format: "image/png",
+            transparent: true,
+            version: '1.1.0',
+            attribution: "Departamentos Colombia"
+        });
+
+        var terminal = L.tileLayer.wms('http://localhost:8080/geoserver/visorweb/wms?', {
+            layers: "visorweb:terminales",
+            format: "image/png",
+            transparent: true,
+            version: '1.1.0',
+            attribution: "Terminales de Colombia"
+        });
+
+        //Agregar Administrar capa
+        var osmUrl = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        var osmAttrib = 'Map data &copy; OpenStreetMap contributors';
+        var cartoUrl = 'http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+        var cartoAttrib = 'Map data &copy; OpenStreetMap contributors';
+
+        var baseLayers = {
+            OSM: L.tileLayer(osmUrl, { minZoom: 0, maxZoom: 13, attribution: osmAttrib }),
+            DarkMap: L.tileLayer(cartoUrl, { minZoom: 0, maxZoom: 13, attribution: cartoAttrib })
+        };
+
+        var capass = {
+            Paises: pais,
+            Ciudades: Ciudades,
+            Departamento: depart,
+            Terminales: terminal
+        };
+
+        //map.setView(new L.LatLng(59.92448055859924, 10.758276373601069), 4);
+        L.control.layers(baseLayers, capass).addTo(map);
+
+        //Minimapa
+        var miniMap = new L.Control.MiniMap(baseLayers.OSM, {
+            toggleDisplay: true
+        }).addTo(map);
+        new L.Control.scale({ imperial: false }).addTo(map);
+
+        //Esto es para que se modifique junto con la capa base, pero falta modificar para que funcione
+        /* map.on('baselayerchange', function (e) {
+             miniMap.changeLayer(baseLayers[e.name])
+         });*/
+
+
+        // Controles utilizados
+        L.control.scale({
+            position: 'bottomright',
+            imperial: false
+        }).addTo(map);
+
+
+
+
+
+
+    </script>
+</body>
+
+</html>
